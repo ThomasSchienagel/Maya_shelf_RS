@@ -1,0 +1,82 @@
+global proc shelf_RS () {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+
+
+    shelfButton
+        -enableCommandRepeat 1
+        -flexibleWidthType 3
+        -flexibleWidthValue 32
+        -enable 1
+        -width 35
+        -height 34
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "RS | Open RenderView" 
+        -enableBackground 0
+        -backgroundColor 0 0 0 
+        -highlightColor 0.321569 0.521569 0.65098 
+        -align "center" 
+        -label "RS | Scipt Collection" 
+        -labelOffset 0
+        -rotation 0
+        -flipX 0
+        -flipY 0
+        -useAlpha 1
+        -font "plainLabelFont" 
+        -imageOverlayLabel "RS" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.5 
+        -image "C:/ProgramData/Redshift/Plugins/Maya/Common/icons/rs_settings.png" 
+        -image1 "C:/ProgramData/Redshift/Plugins/Maya/Common/icons/rs_settings.png" 
+        -style "iconOnly" 
+        -marginWidth 0
+        -marginHeight 1
+        -command "// Verify if redshift4Maya is installed\n$pluginActive = false;\n$pluginItems = `pluginInfo -query -listPlugins`;\nfor ($each in $pluginItems){\n    if ($each == \"redshift4maya\") $pluginActive = true;\n}\nif ($pluginActive == false) {\n    error(\"Please install and activate 'redshift4Maya' in order to use this scripts\");\n}\n\n\n// *** Script ***\nredshiftRvShow;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+        -mi "New Material" ( "// ----------------------------------------------------------------\n// Script Name:\t\tRS | Create and apply Material\n// Version:\t\t\t1.0\n//\n// Author:\t\t\tThomas Schienagel\n// Last Updated:\t2023/04\t\n// Compatibility:\tTested with Maya 2023\n//\n// Description:\t\tCreates a Redshift Material and applies it to selected object\n// ----------------------------------------------------------------\n\n// Verify if redshift4Maya is installed\n$pluginActive = false;\n$pluginItems = `pluginInfo -query -listPlugins`;\nfor ($each in $pluginItems){\n    if ($each == \"redshift4maya\") $pluginActive = true;\n}\nif ($pluginActive == false) {\n    error(\"Please install and activate 'redshift4Maya' in order to use this scripts\");\n}\n\n\n// *** Script ***\nstring $selObjects[] = `ls -sl`;\nstring $newMatRS = `shadingNode -asShader RedshiftMaterial`;\nfor ($each in $selObjects) {\n\tassignCreatedShader \"RedshiftMaterial\" \"\" $newMatRS $each;\n}\n" )
+        -mi "DomeLight and Catcher" ( "// ----------------------------------------------------------------\n// Script Name:\t\tRS | Create DomeLight with ShadowCatcher\n// Version:\t\t\t1.0\n//\n// Author:\t\t\tThomas Schienagel\n// Last Updated:\t2023/04\t\n// Compatibility:\tTested with Maya 2023\n//\n// Description:\t\tCreate a simple Redshift Light-Setup with a pre-defined DomeLight and ShadowCatcher plane.\n// ----------------------------------------------------------------\n\n// Verify if redshift4Maya is installed\n$pluginActive = false;\n$pluginItems = `pluginInfo -query -listPlugins`;\nfor ($each in $pluginItems){\n    if ($each == \"redshift4maya\") $pluginActive = true;\n}\nif ($pluginActive == false) {\n    error(\"Please install and activate 'redshift4Maya' in order to use this scripts\");\n}\n\n\n// *** Script ***\n// Create DomeLight plus ShadowCatcher and assign default texture if available\nstring $defaultDomeTex = \"C:/Program Files/Allegorithmic/Adobe Substance 3D Painter/resources/starter_assets/environments/Studio/Studio Tomoco.exr\";\nint $verifyFilePath = `filetest -f $defaultDomeTex`;\nif ($verifyFilePath == 0) $defaultDomeTex = \"\";\n\nfloat $scaleFactor = 10; // default scaleFactor\n\nredshiftCreateDomeLight;\nstring $domeLight[] = `ls -sl`;\nsetAttr ($domeLight[0] + \".scaleX\") $scaleFactor;\nsetAttr ($domeLight[0] + \".scaleY\") $scaleFactor;\nsetAttr ($domeLight[0] + \".scaleZ\") $scaleFactor;\n\nsetAttr ($domeLight[0] + \".tex0\") -type \"string\" $defaultDomeTex;\nstring $createShadowCatcher[] = `polyDisc -sides 20 -subdivisionMode 4 -subdivisions 1 -radius ($scaleFactor * 10)`;\nstring $shadowCatcher = `rename $createShadowCatcher[0] \"shadowCatcher\"`;\n\nstring $rsMatteShadow = `shadingNode -asShader RedshiftMatteShadowCatcher`;\nassignCreatedShader \"RedshiftMatteShadowCatcher\" \"\" $rsMatteShadow $shadowCatcher;\nsetAttr ($rsMatteShadow + \".ao_on\") 1;\nsetAttr ($rsMatteShadow + \".ao_distance\") 25;\nsetAttr ($rsMatteShadow + \".refl_enabled\") 1;\nsetAttr ($rsMatteShadow + \".refl_max_dist\") 25;\nsetAttr ($rsMatteShadow + \".refl_glossiness\") 0.5;\nsetAttr ($rsMatteShadow + \".refl_fog_enable\") 1;\nsetAttr ($rsMatteShadow + \".backgroundIsEnv\") 1;" )
+        -mi "AreaLight with Aim" ( "// ----------------------------------------------------------------\n// Script Name:\t\tRS | Aim-Constrained AreaLight\n// Version:\t\t\t1.0\n//\n// Author:\t\t\tThomas Schienagel\n// Last Updated:\t2023/04\t\n// Compatibility:\tTested with Maya 2023\n//\n// Description:\t\tCreate a Redshift AreaLight with an aim-target.\n//\t\t\t\t\tThe aim-target is parented to any previously selected object.\n// ----------------------------------------------------------------\n\n// Verify if redshift4Maya is installed\n$pluginActive = false;\n$pluginItems = `pluginInfo -query -listPlugins`;\nfor ($each in $pluginItems){\n    if ($each == \"redshift4maya\") $pluginActive = true;\n}\nif ($pluginActive == false) {\n    error(\"Please install and activate 'redshift4Maya' in order to use this scripts\");\n}\n\n\n// *** Script ***\nstring $target[] = `ls -sl`;\n\nredshiftCreateLight \"RedshiftPhysicalLight\";\nrename \"rsAreaLight#\";\nstring $selLight[] = `ls -sl -o`;\nsetAttr ($selLight[0] + \".scaleX\") 50;\nsetAttr ($selLight[0] + \".scaleY\") 50;\nsetAttr ($selLight[0] + \".scaleZ\") 50;\nsetAttr ($selLight[0] + \".translateY\") 100;\n\n\n$lightTarget = `spaceLocator -p 0 0 0 -n (\"Target_\"+$selLight[0])`;\nsetAttr ($lightTarget[0] + \".localScaleX\") 10;\nsetAttr ($lightTarget[0] + \".localScaleY\") 10;\nsetAttr ($lightTarget[0] + \".localScaleZ\") 10;\n\nif (size($target) != 0){\n\tparent -relative $lightTarget[0] $target[0];\n}\n\nselect -r $lightTarget;\nselect -add $selLight[0];\naimConstraint -offset 0 0 0 -weight 1 -aimVector 0 0 -1 -upVector 0 1 0 -worldUpType \"vector\" -worldUpVector 0 1 0;\nselect -r $selLight[0];" )
+        -mi "Connect Textures" ( "// ----------------------------------------------------------------\n// Script Name:\t\tRS | Texture Connector Script\n// Version:\t\t\t1.0\n//\n// Author:\t\t\tThomas Schienagel\n// Last Updated:\t2023/04\t\n// Compatibility:\tTested with Maya 2023\n//\n// Description:\t\tAuto-Connect file textures to a Redshift Material based on string patterns\n// ----------------------------------------------------------------\n\n// Verify if redshift4Maya is installed\n$pluginActive = false;\n$pluginItems = `pluginInfo -query -listPlugins`;\nfor ($each in $pluginItems){\n    if ($each == \"redshift4maya\") $pluginActive = true;\n}\nif ($pluginActive == false) {\n    error(\"Please install and activate 'redshift4Maya' in order to use this scripts\");\n}\n\n\n// *** Script ***\n// Define search strings here:\nstring $baseColor \t\t= \"*BaseColor*\";\nstring $height \t\t\t= \"*Height*\";\nstring $metallic \t\t= \"*Metallic*\";\nstring $normal \t\t\t= \"*Normal*\";\nstring $roughness \t\t= \"*Roughness*\";\nstring $translucency \t= \"*Translucency*\";\nstring $opacity \t\t= \"*Opacity*\";\nstring $displacement \t= \"*Displacement*\";\nstring $udim \t\t\t= \"*1001*\";\n\nstring $nodesTex[] = `ls -sl -type \"file\"`;\nstring $nodesMat[] = `ls -sl -type \"RedshiftMaterial\"`;\nint $channel;\n\nif (size($nodesTex) == 0){\nerror (\"Please select at least one texture and redshiftMaterial\");\n}\n\nprint (\"Connecting following textures: \\n\");\nfor ($node in $nodesTex){\n\tprint ($node + \"\\n\");\n\tif (`gmatch $node $baseColor` == 1){\n\t\tconnectAttr -f ($node + \".outColor\") ($nodesMat[0] + \".diffuse_color\");\n\t}\n\tif (`gmatch $node $height` == 1){\n\t\tsetAttr ($node + \".ignoreColorSpaceFileRules\") 1;\n\t\tsetAttr ($node + \".cs\") -type \"string\" \"Raw\";\n\t\tsetAttr ($node + \".alphaIsLuminance\") 1;\n\t}\t\n\tif (`gmatch $node $metallic` == 1){\n\t\tsetAttr ($node + \".ignoreColorSpaceFileRules\") 1;\n\t\tsetAttr ($node + \".cs\") -type \"string\" \"Raw\";\n\t\tsetAttr ($nodesMat[0] + \".refl_fresnel_mode\") 2;\n\t\tconnectAttr -f ($node + \".outAlpha\") ($nodesMat[0] + \".refl_metalness\");\n\t\tsetAttr ($node + \".alphaIsLuminance\") 1;\n\t}\t\n\tif (`gmatch $node $normal` == 1){\n\t\tsetAttr ($node + \".ignoreColorSpaceFileRules\") 1;\n\t\tsetAttr ($node + \".cs\") -type \"string\" \"Raw\";\n\t\tstring $bumpNode = `shadingNode -asTexture RedshiftBumpMap`;\n\t\tsetAttr ($bumpNode + \".inputType\") 1;\n\t\tsetAttr ($bumpNode + \".scale\") 1;\n\t\tconnectAttr -f ($node + \".outColor\") ($bumpNode + \".input\");\n\t\tconnectAttr -f ($bumpNode + \".out\") ($nodesMat[0] + \".bump_input\");\n\t\tsetAttr ($node + \".alphaIsLuminance\") 1;\n\t}\n\tif (`gmatch $node $roughness` == 1){\n\t\tsetAttr ($node + \".ignoreColorSpaceFileRules\") 1;\n\t\tsetAttr ($node + \".cs\") -type \"string\" \"Raw\";\n\t\tconnectAttr -f ($node + \".outAlpha\") ($nodesMat[0] + \".refl_roughness\");\n\t\tsetAttr ($node + \".alphaIsLuminance\") 1;\n\t}\n\tif (`gmatch $node $translucency` == 1){\n\t\tconnectAttr -f ($node + \".outColor\") ($nodesMat[0] + \".transl_color\");\n\t}\n\tif (`gmatch $node $opacity` == 1){\n\t\tsetAttr ($node + \".ignoreColorSpaceFileRules\") 1;\n\t\tsetAttr ($node + \".cs\") -type \"string\" \"Raw\";\n\t\tconnectAttr -f ($node + \".outColor\") ($nodesMat[0] + \".opacity_color\");\n\t\tsetAttr ($node + \".alphaIsLuminance\") 1;\n\t}\n\tif (`gmatch $node $displacement` == 1){\n\t\tsetAttr ($node + \".ignoreColorSpaceFileRules\") 1;\n\t\tsetAttr ($node + \".cs\") -type \"string\" \"Raw\";\n\t\tsetAttr ($node + \".alphaIsLuminance\") 1;\n\t\tstring $getShadingEngine[] = `listConnections -t \"shadingEngine\" $nodesMat`;\n\t\tif ($getShadingEngine[0] != \"\"){\n\t\t\tstring $rsDispNode = `shadingNode -asUtility RedshiftDisplacement`;\n\t\t\tconnectAttr -f ($node + \".outColor\") ($rsDispNode + \".texMap\");\n\t\t\tconnectAttr -f ($rsDispNode + \".out\") ($getShadingEngine[0] + \".displacementShader\");\n\t\t}\n\t}\n\t\n\tstring $texFile = `getAttr ($node + \".fileTextureName\")`;\n\tif (`gmatch $texFile $udim` == 1){\n\t\tsetAttr ($node + \".uvTilingMode\") 3;\n\t}\n}" )
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -flexibleWidthType 3
+        -flexibleWidthValue 32
+        -enable 1
+        -width 35
+        -height 34
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "RS | Solo a redshift node in the Hypershade Editor --> Apply this script to a hotkey to get the most out of it" 
+        -enableBackground 0
+        -backgroundColor 0 0 0 
+        -highlightColor 0.321569 0.521569 0.65098 
+        -align "center" 
+        -label "RS | Redshift Solo Node" 
+        -labelOffset 0
+        -rotation 0
+        -flipX 0
+        -flipY 0
+        -useAlpha 1
+        -font "plainLabelFont" 
+        -imageOverlayLabel "SOLO" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.5 
+        -image "C:/ProgramData/Redshift/Plugins/Maya/Common/icons/rs_settings.png" 
+        -image1 "C:/ProgramData/Redshift/Plugins/Maya/Common/icons/rs_settings.png" 
+        -style "iconOnly" 
+        -marginWidth 0
+        -marginHeight 1
+        -command "// ----------------------- rsSoloScript.mel ------------------------\n//\n// Script Name:\t\trsSoloScript.mel\n// Version:\t\t\t1.0\n//\n// Creation Date:\t05th August 2022\n// Last Updated:\t2022/08/05\t\n// Author:\t\t\tThomas Schienagel\t\n//\n// Description:\t\tEnables Solo-Mode for selected or previously selected Redhsift shading nodes.\n//\t\t\t\t\tIt is mandatory that the material has a shadingGroup.\n// \t\t\t\t\tOpen HotkeyEditor and create a new runtime command. Paste Script and save the command. \n//\t\t\t\t\tSwitch \"Edit Hotkeys for:\" to Custom Scripts. Select runtime command and assign a hotkey \"on Press\".\n// Compatibility:\tTested with Maya 2022\n//\n// ----------------------------------------------------------------\n\n// Verify if redshift4Maya is installed\n$pluginActive = false;\n$pluginItems = `pluginInfo -query -listPlugins`;\nfor ($each in $pluginItems){\n    if ($each == \"redshift4maya\") $pluginActive = true;\n}\nif ($pluginActive == false) {\n    error(\"Please install and activate 'redshift4Maya' in order to use this scripts\");\n}\n\n\n// *** Script ***\nglobal string $gs_seNode;\nglobal string $gs_txNode;\nstring $nodeType;\nstring $nodeList[];\nint $seCount = 0;\n\nstring $getNode[] = `ls -sl`;\nif ($getNode[0] != \"\"){\n\t$nodeType = `objectType -isType \"transform\" $getNode[0]`;\n\t\tif ($nodeType == 1) error \"Wrong selection type. Please select a shading node.\";\n\t$nodeList = `listHistory -f true $getNode[0]`; \t// Verify connected nodes\n\tfor ($i=0; $i<size($nodeList); ++$i) {\n\t\t$nodeType = `objectType -isType \"shadingEngine\" $nodeList[$i]`;\n\t\tif ($nodeType == 1 && $seCount == 0) { // proceed with first valid result\n\t\t\trsSoloNode($getNode[0], $nodeList[$i]);\n\t\t\t$seCount ++;\n\t\t}\n\t}\n\tif ($seCount > 1){\n\t\twarning (\"Multiple shadingEngines found! Please verify connections. \\n\"); \n\t}\n\tif ($seCount == 0){\n\t\twarning (\"No connected shadingEngine found. Using last known shadingEngine: \" + $gs_seNode + \"\\n\");\n\t\trsSoloNode($getNode[0],$gs_seNode);\n\t}\n} else if ($gs_txNode != \"\" && $gs_seNode != \"\"){\n\t\trsSoloNode($gs_txNode, $gs_seNode);\n}\n\nglobal proc rsSoloNode(string $getTarget, string $getSE){\n\tglobal string $gs_seNode;\n\tglobal string $gs_txNode;\n\t$gs_txNode = $getTarget;\n\t$gs_seNode = $getSE;\n\tstring $checkCon[] = `listConnections -t \"shadingEngine\" $gs_txNode`;\n\t// disconnect existing connections\n\tif ($checkCon[0] != \"\"){\n\t\tstring $hasCon[] = `listConnections -s true -d false ($checkCon[0] + \".rsSurfaceShader\")`;\t\n\t\tif ($hasCon[0] != \"\") {\n\t\t\tstring $checkPlug[] = `listConnections -c true -t \"shadingEngine\" $hasCon[0]`;\n\t\t\tprint (\"Disconnecting: \" + $checkPlug[0] + \" ! \" + ($checkCon[0] + \".rsSurfaceShader\") + \"\\n\");\t\t\n\t\t\tdisconnectAttr $checkPlug[0] ($checkCon[0] + \".rsSurfaceShader\");\t\n\t\t}\n\t}\n\t// build new connection\n\tif ($checkCon[0] == \"\") {\n\t\tprint (\"Connecting: \" + $gs_txNode + \" --> \" + $gs_seNode + \"\\n\");\t\t\t\t\n\t\tdefaultNavigation -ce -s $gs_txNode -d ($gs_seNode + \".rsSurfaceShader\");\t\t\t\n\t}\n}" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+
+} 
